@@ -6,11 +6,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'session_token',
     ];
 
     /**
@@ -44,5 +46,43 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function passwordHistories()
+    {
+        return $this->hasMany(PasswordHistory::class);
+    }
+
+    /**
+     * Get the user's profile.
+     */
+    public function profile()
+    {
+        return $this->hasOne(Profile::class);
+    }
+
+    public function isPasswordUsedBefore($password, $limit = 5): bool
+    {
+        $recentPasswords = $this->passwordHistories()
+            ->latest('changed_at')
+            ->limit($limit)
+            ->pluck('password_hash')
+            ->toArray();
+
+        foreach ($recentPasswords as $hash) {
+            if (\Hash::check($password, $hash)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function recordPasswordHistory($password): void
+    {
+        $this->passwordHistories()->create([
+            'password_hash' => \Hash::make($password),
+            'changed_at' => now(),
+        ]);
     }
 }
