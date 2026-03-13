@@ -175,7 +175,7 @@ class PostController extends Controller
             $path = $file->storeAs('posts', $filename, 'public');
             $data['file_path'] = $path;
             $data['file_name'] = $file->getClientOriginalName();
-            $data['file_type'] = $file->getClientMimeType();
+            $data['file_type'] = $file->getMimeType();
             $data['file_size'] = $file->getSize();
         }
 
@@ -312,14 +312,5 @@ class PostController extends Controller
         }
         
         return substr($code, 0, $length);
-    }
-
-    public function requestFile() // request file Rahasia
-    {
-        $data = Post::where('type', 'rahasia')->get();
-        //return response()->json($data);
-
-
-        return view('posts.request-file', compact('data'));
     }
 }

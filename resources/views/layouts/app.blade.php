@@ -46,6 +46,15 @@
                                 </a>
                             </li>
                         @endauth
+
+                        @hasanyrole('Superadmin|kasubag|komisioner')
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('request-file.index') }}">
+                                    <i class="bi bi-file-earmark-text me-1"></i> {{ __('Request File') }}
+                                </a>
+                            </li>
+                        @endhasanyrole
+                      
                     </ul>
 
                     <!-- Right Side Of Navbar -->

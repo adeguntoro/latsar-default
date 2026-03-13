@@ -260,7 +260,12 @@ class UserManageController extends Controller
     public function updateProfile(Request $request)
     {
         $user = auth()->user();
+        
+        // Get or create profile
         $profile = $user->profile;
+        if (!$profile) {
+            $profile = new Profile(['user_id' => $user->id]);
+        }
 
         $request->validate([
             'bio' => 'nullable|string|max:1000',
@@ -278,10 +283,12 @@ class UserManageController extends Controller
             
             // Store new avatar
             $avatarPath = $request->file('avatar_file')->store('avatars', 'public');
+            
             $profile->avatar = asset('storage/' . $avatarPath);
         }
 
-        $profile->update($request->only(['bio', 'phone', 'address']));
+        $profile->fill($request->only(['bio', 'phone', 'address']));
+        $profile->save();
 
         return redirect()->route('profile.view')->with('success', 'Profile updated successfully.');
     }

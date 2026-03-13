@@ -4,11 +4,24 @@
 <div class="container text-center mt-5">
     <div class="card shadow p-5">
         <h1 class="text-danger">403</h1>
-        <h4 class="mb-3">Access Denied</h4>
-        <p class="text-muted">
-            You do not have permission to access this page.
-            Silahkan datang ke kantor untuk meminta akses data yang dibutuhkan.
-        </p>
+        @if(auth()->check() && !auth()->user()->roles()->exists())
+            <h4 class="mb-3">No Role Assigned</h4>
+            <p class="text-muted">
+                Akun Anda belum memiliki peran. 
+                Silakan hubungi administrator untuk meminta penugasan peran.
+            </p>
+        @else
+            <h4 class="mb-3">Access Denied</h4>
+            <p class="text-muted">
+                You do not have permission to access this page.
+                Silahkan datang ke kantor untuk meminta akses data yang dibutuhkan.
+            </p>
+        @endif
+
+       {{ auth()->user()->getRoleNames()->first() }}
+            <a href="{{ url('/home') }}" class="btn btn-primary mt-3">
+                Go Back Home
+            </a>
 
         <a href="{{ url('/') }}" class="btn btn-primary mt-3">
             Go Back homepage

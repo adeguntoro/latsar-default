@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create 10 users
-        // $users = User::factory(3)->create();
+        $users = User::factory(3)->create();
 
         /*
         User::create([
@@ -34,13 +34,13 @@ class DatabaseSeeder extends Seeder
         
 
         // Create posts with PDFs
-        Post::factory(50)->create();
+        Post::factory(1)->create();
 
         // Import posts to Scout search index
         $this->command->info('Importing posts to search index...');
         Artisan::call('scout:import', ['model' => 'App\\Models\\Post']);
 
-        /*
+        
         
         //open this
         $this->call([
@@ -53,7 +53,7 @@ class DatabaseSeeder extends Seeder
         $users->each(function ($user) {
             Profile::factory()->create(['user_id' => $user->id]);
         });
-        */
+        
 
         
     }

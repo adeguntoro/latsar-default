@@ -73,11 +73,8 @@
                 <div class="card-body">
                     <h5 class="card-title">Daftar posting</h5>
                     <p class="card-text">Lihat Daftar Postingan</p>
-
-                    <a href="/dashboard/posts"
-                       class="btn btn-primary w-100">
-                        Lihat Postingan
-                    </a>
+                    {{-- <a href="/dashboard/posts"class="btn btn-primary w-100">Lihat Postingan</a> --}}
+                    <a href="{{ url('/dashboard/posts') }}"class="btn btn-primary w-100">Lihat Postingan</a>
                 </div>
             </div>
         </div>

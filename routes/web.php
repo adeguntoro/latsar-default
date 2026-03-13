@@ -28,8 +28,6 @@ Route::get('/table', function () {
     return view('tabel');
 });
 
-
-
 Route::resource('/dashboard/posts', PostController::class);
 Route::get('posts/{post}/download', [PostController::class, 'download'])->name('posts.download')->middleware('signed');;
 
@@ -53,14 +51,32 @@ Route::get('/search/results', [App\Http\Controllers\SearchController::class, 're
 //     Route::post('/change-password', [UserManageController::class, 'changePassword'])->name('password.change');
 // });
 
+// Route for users without any role
+Route::get('/no-role', function () {
+    abort(403, 'No role assigned');
+})->name('no.role');
+
 // My Profile routes (accessible to any authenticated user)
-Route::middleware(['auth', 'ensure.single.session'])->group(function () {
+Route::middleware(['auth', 'ensure.single.session', 'ensure.user.has.role'])->group(function () {
     Route::get('/my-profile', [UserManageController::class, 'myProfile'])->name('profile.view');
     Route::get('/my-profile/edit', [UserManageController::class, 'editProfile'])->name('profile.edit');
     Route::put('/my-profile', [UserManageController::class, 'updateProfile'])->name('profile.update');
 });
 
-Route::middleware(['auth', 'ensure.single.session'])
+// Request File routes (moved out of {role} prefix)
+Route::middleware(['auth', 'ensure.single.session', 'role:Superadmin|kasubag|komisioner'])
+    ->resource('dashboard/request-file', App\Http\Controllers\RequestFileController::class)
+    ->names([
+        'index' => 'request-file.index',
+        'create' => 'request-file.create',
+        'store' => 'request-file.store',
+        'show' => 'request-file.show',
+        'edit' => 'request-file.edit',
+        'update' => 'request-file.update',
+        'destroy' => 'request-file.destroy',
+    ]);
+
+Route::middleware(['auth', 'ensure.single.session', 'ensure.user.has.role'])//, 'ensure.user.has.role']) 
     ->prefix('{role}')
     ->group(function () {
 
@@ -121,8 +137,6 @@ Route::middleware(['auth', 'ensure.single.session'])
         Route::delete('/dashboard/manage-user/{user}', [UserManageController::class, 'destroy'])
             ->where('user', '[0-9]+')
             ->name('users.destroy');
-
-        Route::get('/dashboard/request-file', [PostController::class, 'requestFile'])->name('posts.request-file');
         
         /*
         Route::get('/dashboard/request-file', function () {

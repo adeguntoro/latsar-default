@@ -85,4 +85,12 @@ class User extends Authenticatable
             'changed_at' => now(),
         ]);
     }
+
+    /**
+     * Get the request files created by this user.
+     */
+    public function requestFiles()
+    {
+        return $this->hasMany(RequestFile::class, 'user_served');
+    }
 }

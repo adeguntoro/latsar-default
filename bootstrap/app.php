@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'ensure.single.session' => \App\Http\Middleware\EnsureSingleSession::class,
+            'ensure.user.has.role' => \App\Http\Middleware\EnsureUserHasRole::class,
         ]);
         
         $middleware->trustProxies(at: '*');

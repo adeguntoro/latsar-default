@@ -40,4 +40,12 @@ class Post extends Model
             // 'excerpt' => $this->excerpt
         ];
     }
+
+    /**
+     * Get the request files for the post.
+     */
+    public function requestFiles()
+    {
+        return $this->hasMany(RequestFile::class);
+    }
 }
