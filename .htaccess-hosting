@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Don't rewrite if the request is already for the public folder
+    RewriteRule ^public/ - [L]
+
+    # If the request is for the root URL, rewrite to public/index.php
+    RewriteRule ^$ public/index.php [L]
+
+    # For all other requests, rewrite to the public folder
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+comment every route which 

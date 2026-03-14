@@ -273,23 +273,36 @@ class UserManageController extends Controller
             'address' => 'nullable|string|max:500',
             'avatar_file' => 'nullable|image|mimes:jpg,jpeg|max:2048',
         ]);
-
+        
         // Handle avatar file upload
         if ($request->hasFile('avatar_file')) {
+            $file = $request->file('avatar_file');
+            $extension = $file->getClientOriginalExtension();
+            
             // Delete old avatar if exists
-            if ($profile->avatar && Storage::exists($profile->avatar)) {
-                Storage::delete($profile->avatar);
+            if ($profile->avatar && Storage::disk('public')->exists($profile->avatar)) {
+                Storage::disk('public')->delete($profile->avatar);
             }
             
-            // Store new avatar
-            $avatarPath = $request->file('avatar_file')->store('avatars', 'public');
+            // Generate filename
+            $filename = time() . '_' . uniqid() . '.' . $extension;
             
-            $profile->avatar = asset('storage/' . $avatarPath);
+            // Create avatars folder if not exists
+            $destinationPath = storage_path('app/public/avatars');
+            if (!is_dir($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            
+            // Move file
+            $file->move($destinationPath, $filename);
+            
+            // Save path only
+            $profile->avatar = 'avatars/' . $filename;
         }
-
+        
         $profile->fill($request->only(['bio', 'phone', 'address']));
         $profile->save();
-
+        
         return redirect()->route('profile.view')->with('success', 'Profile updated successfully.');
     }
 }

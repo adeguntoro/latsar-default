@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use App\Models\Post;
 use App\Models\Profile;
+use App\Models\RequestFile;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -20,23 +21,26 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create 10 users
-        $users = User::factory(3)->create();
+        // // Create 10 users
+        // $users = User::factory(3)->create();
 
-        /*
-        User::create([
-            'name' => 'Test User',
-            'email' => 'ade@gmail.com',
-            'password' => Hash::make('1234'),
-        ]);
+        // /*
+        // User::create([
+        //     'name' => 'Test User',
+        //     'email' => 'ade@gmail.com',
+        //     'password' => Hash::make('1234'),
+        // ]);
 
-        */
+        // */
         
 
-        // Create posts with PDFs
-        Post::factory(1)->create();
+        // // Create posts with PDFs
+        Post::factory(10)->create();
+        // Post::factory(6)->create([
+        //     'type' => 'rahasia'
+        // ]);
 
-        // Import posts to Scout search index
+        // // Import posts to Scout search index
         $this->command->info('Importing posts to search index...');
         Artisan::call('scout:import', ['model' => 'App\\Models\\Post']);
 
@@ -49,11 +53,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         
-        // Create profiles for the existing users (one-to-one)
-        $users->each(function ($user) {
-            Profile::factory()->create(['user_id' => $user->id]);
-        });
-        
+        // // Create profiles for the existing users (one-to-one)
+        // $users->each(function ($user) {
+        //     Profile::factory()->create(['user_id' => $user->id]);
+        // });
+
+        // // Create request files
+        // RequestFile::factory(20)->create();
 
         
     }

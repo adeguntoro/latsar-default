@@ -10,10 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
-<<<<<<< HEAD
         "artesaos/seotools": "^1.3",
-=======
->>>>>>> f566370024d402d070e1181403d8e38938328558
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^12.0",
         "laravel/scout": "^10.24",
@@ -24,6 +21,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "fruitcake/laravel-debugbar": "^4.1",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
         "laravel/sail": "^1.41",

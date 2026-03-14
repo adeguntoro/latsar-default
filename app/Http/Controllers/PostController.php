@@ -1,17 +1,5 @@
 <?php
 
-/**
- * PostController - Handles CRUD operations for posts
- * 
- * CHANGELOG:
- * - 2026-02-19: Changed SESSION_DRIVER from 'database' to 'file' in .env to fix
- *   "PHP Request Startup: file created in the system's temporary directory" error.
- *   The database session driver was causing issues with PHP temp directory configuration.
- * 
- * @author Cline
- * @date 2026-02-19
- */
-
 namespace App\Http\Controllers;
 
 use App\Models\Post;
@@ -23,43 +11,37 @@ use Illuminate\Support\Str;
 
 class PostController extends Controller
 {
-    /**
-     * Constructor to apply role-based access control
-     * ORIGINAL: Only users with roles: Superadmin, kasubag, komisioner, staff can access any method
-     * This blocked all guests from viewing any posts, including publik ones.
-     * 
-     * UPDATED: CRUD methods require authentication + specific roles, but public methods
-     * (showBySlug, download) are accessible to guests - access control based on post type
-     * is handled in SearchController and the view layer.
-     */
+
     public function __construct()
     {
-        $this->middleware(function ($request, $next) {
-            $publicMethods = ['showBySlug', 'download'];
-            
-            // Allow public access to showBySlug and download (type-based filtering in SearchController)
-            if (in_array($request->route()->getActionMethod(), $publicMethods)) {
-                return $next($request);
-            }
-            
-            // Require authentication and specific roles for CRUD operations
-            if (!auth()->check() || !auth()->user()->hasAnyRole(['Superadmin', 'kasubag', 'komisioner', 'staff'])) {
-                abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
-            }
-            return $next($request);
-        });
+        // Apply auth middleware to all methods except showBySlug and download
+     
     }
-
     public function index()
     {
-        // OLD: Get all posts without ordering
-        // $posts = Post::all();
+        // $posts = Post::latest()->get();
         
-        // NEW: Get all posts sorted by newest first (created_at DESC)
-        // DataTables handles pagination, sorting, and searching on frontend
-        $posts = Post::latest()->get();
+        // return view('posts.index', compact('posts'));
+
+        // $query = Post::query();
+
+        // Hide rahasia posts from non-authorized users
+        // if (!auth()->check() || !auth()->user()->hasRole(['kasubag', 'komisioner'])) {
+        //     $query->where('type', '!=', 'rahasia');
+        // }
+
+        // $posts = $query->all();
+        // return view('posts.index', compact('posts'));
+
+        
+        if (!auth()->check() || !auth()->user()->hasRole(['kasubag', 'komisioner'])) {
+            $posts = Post::where('type', '!=', 'rahasia')->get();
+        } else {
+            $posts = Post::all();
+        }
         
         return view('posts.index', compact('posts'));
+        
     }
 
     public function create()
@@ -74,70 +56,85 @@ class PostController extends Controller
             'content' => 'required',
             'department' => 'required',
             'type' => 'required|in:publik,internal,rahasia',
-            'file' => 'nullable|file',
+            'file' => 'nullable|file|max:10240', // Added max file size (10MB)
         ]);
+    
+        $post = new Post($validated);
 
-        // Check if user has permission to create confidential (rahasia) posts
-        if ($validated['type'] === 'rahasia' && !$request->user()->can('create confidential files')) {
-            abort(403, 'Anda tidak memiliki izin untuk membuat postingan rahasia.');
-        }
+            $slug = Str::slug($validated['title']) . '-' . Str::random(8);
+            $shortUrl = Str::random(8);
+        
+            $filePath = null;
+            $fileName = null;
+        
+            // Handle file upload
+            if ($request->hasFile('file')) {
+                $file = $request->file('file');
+                $extension = $file->getClientOriginalExtension();
 
-        $data = $validated;
-        $data['department'] = $request->input('department');
-        
-        // OLD: Generate random slug code
-        // $data['slug'] = $this->generateUniqueCode(5);
-        
-        // NEW: Generate slug based on title (slugified) + unique code for uniqueness
-        $data['slug'] = Str::slug($data['title']) . '-' . $this->generateUniqueCode(8);
-        
-        // Generate unique short_url code (8 characters)
-        $data['short_url'] = $this->generateUniqueCode(8);
-
-        // Handle file upload
-        if ($request->hasFile('file') && $request->file('file')->isValid()) {
-            $file = $request->file('file');
-            $extension = $file->getClientOriginalExtension();
-            
-            // Generate filename with extension
-            if ($extension) {
-                $filename = time() . '_' . $data['short_url'] . '.' . $extension;
-            } else {
-                $filename = time() . '_' . $data['short_url'];
+                $fileName = $file->getClientOriginalName();
+                $fileType = $file->getMimeType();
+                $fileSize = $file->getSize();
+                
+                // Generate filename with random string
+                $filename = time() . '_' . Str::random(8) . '.' . $extension;
+                
+                // Create posts folder if not exists
+                $destinationPath = storage_path('app/public/posts');
+                if (!is_dir($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+                
+                // Move file
+                $file->move($destinationPath, $filename);
+                
+                // Save path and original filename
+                $filePath = 'posts/' . $filename;
+                $fileName = $file->getClientOriginalName();
             }
-            
-            $path = $file->storeAs('posts', $filename, 'public');
-            
-            if ($path) {
-                $data['file_path'] = $path;
-                $data['file_name'] = $file->getClientOriginalName();
-                $data['file_type'] = $file->getClientMimeType();
-                $data['file_size'] = $file->getSize();
-            }
-        }
+        
+            Post::create([
+                'title' => $validated['title'],
+                'content' => $validated['content'],
+                'department' => $validated['department'],
+                'type' => $validated['type'],
+                'slug' => $slug,
+                'short_url' => $shortUrl,
+                'file_path' => $filePath,
+                'file_name' => $fileName,
+                'file_type' => $fileType,
+                'file_size' => $fileSize,
+                'status' => 'published',
+            ]);
 
-        Post::create($data);
+            //for indexing you can try :
+            // $post = Post::create([...]);
+            // $post->indexSearchable(); // or ->index()
 
-        return redirect()->route('posts.index');
+        return redirect()->route('posts.index')->with('success', 'Post created successfully!');
     }
 
     public function show(Post $post)
     {
-        // Track view count with cookie (3 hours expiration)
-        /*
-        $cookieName = 'post_viewed_' . $post->id;
-        
-        if (!Cookie::has($cookieName)) {
-            // Increment view count
-            $post->increment('views_count');
-            
-            // Set cookie for 3 hours (180 minutes)
-            Cookie::queue($cookieName, true, 180);
+        // $post = Post::all();
+
+        // return view('posts.show', compact('post'));
+
+        if (!auth()->check()) {
+            abort(403, 'Please login to access this post');
         }
-        */
-        
+    
+        // If post type is rahasia, only kasubag and komisioner can access
+        if ($post->type === 'rahasia' && !auth()->user()->hasRole(['kasubag', 'komisioner'])) {
+            abort(403, 'You do not have permission to access this post');
+        }
+    
+        // internal and publik - all authenticated users can access
+    
+        $post->increment('views_count');
         return view('posts.show', compact('post'));
-    }
+
+        }
 
     public function edit(Post $post)
     {
@@ -153,36 +150,42 @@ class PostController extends Controller
             'file' => 'nullable|file',
         ]);
 
-        // Check if user has permission to edit confidential (rahasia) posts
-        if ($validated['type'] === 'rahasia' && !$request->user()->can('create confidential files')) {
-            abort(403, 'Anda tidak memiliki izin untuk mengedit postingan rahasia.');
-        }
-
-        $data = $validated;
-        $data['department'] = $request->input('department');
-
-        // Handle file upload
-        if ($request->hasFile('file')) {
-            // Delete old file
-            if ($post->file_path) {
-                Storage::disk('public')->delete($post->file_path);
-            }
-
+        // Handle file upload if new file provided
+        if ($request->hasFile('file') && $request->file('file')->isValid()) {
             $file = $request->file('file');
-            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            
+            $fileName = $file->getClientOriginalName();
+            $fileType = $file->getMimeType();
+            $fileSize = $file->getSize();
             $extension = $file->getClientOriginalExtension();
-            $filename = $originalName . '_' . $post->short_url . '.' . $extension;
-            $path = $file->storeAs('posts', $filename, 'public');
-            $data['file_path'] = $path;
-            $data['file_name'] = $file->getClientOriginalName();
-            $data['file_type'] = $file->getMimeType();
-            $data['file_size'] = $file->getSize();
+            
+            // Generate new filename with random string (don't delete old file)
+            $filename = time() . '_' . Str::random(8) . '.' . $extension;
+            
+            // Create posts folder if not exists
+            $destinationPath = storage_path('app/public/posts');
+            if (!is_dir($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            
+            // Move new file (don't delete old file)
+            $file->move($destinationPath, $filename);
+            
+            // Set new file path
+            $filePath = 'posts/' . $filename;
+            
+            // Update file fields
+            $validated['file_path'] = $filePath;
+            $validated['file_name'] = $fileName;
+            $validated['file_type'] = $fileType;
+            $validated['file_size'] = $fileSize;
         }
 
-        $post->update($data);
+        // Update post
+        $post->update($validated);
         $post->searchable(); // Re-index for search
 
-        return redirect()->route('posts.index');
+        return redirect()->route('posts.index')->with('success', 'Post updated successfully!');
     }
 
     public function destroy(Post $post)
@@ -195,40 +198,20 @@ class PostController extends Controller
         $post->unsearchable(); // Remove from search index
         $post->delete();
 
-        return redirect()->route('posts.index');
+        return redirect()->route('posts.index')->with('success', 'Post deleted successfully!');
     }
 
     public function download(Post $post)
     {
-        // Apply access control based on post type and user role
-        if (auth()->check()) {
-            $user = auth()->user();
-            $userRoles = $user->roles->pluck('name')->toArray();
-            
-            // Check if user has kasubag, komisioner, or Superadmin role (can see all types)
-            $isPrivileged = in_array('kasubag', $userRoles) || in_array('komisioner', $userRoles) || in_array('Superadmin', $userRoles);
-            
-            if (!$isPrivileged && $post->type === 'rahasia') {
-                abort(403, 'Anda tidak memiliki izin untuk mengunduh postingan rahasia.');
-            }
-        } else {
-            // Guests can only download publik posts
-            if ($post->type !== 'publik') {
-                abort(403, 'Postingan ini bersifat internal/rahasia. Silakan login untuk mengakses.');
-            }
-        }
-        
-        if ($post->file_path) {
-            // Increment download count
+        if ($post->file_path && Storage::disk('public')->exists($post->file_path)) {
             $post->increment('downloads_count');
-            
             return Storage::disk('public')->download($post->file_path, $post->file_name);
         }
         
-        abort(404);
+        abort(404, 'File not found');
     }
 
-    public function showBySlug($slug)
+    public function showBySlug($slug, Request $request)
     {
         // Try to find by slug first, then by short_url
         $post = Post::where('slug', $slug)->orWhere('short_url', $slug)->firstOrFail();
@@ -238,32 +221,44 @@ class PostController extends Controller
             return redirect(url($post->slug), 301);
         }
         
-        // Apply access control based on post type and user role
-        if (auth()->check()) {
-            $user = auth()->user();
-            $userRoles = $user->roles->pluck('name')->toArray();
-            
-            // Check if user has kasubag, komisioner, or Superadmin role (can see all types)
-            $isPrivileged = in_array('kasubag', $userRoles) || in_array('komisioner', $userRoles) || in_array('Superadmin', $userRoles);
-            
-            if (!$isPrivileged && $post->type === 'rahasia') {
-                abort(403, 'Anda tidak memiliki izin untuk mengakses postingan rahasia.');
+        // Check access based on post type
+        if ($post->type === 'rahasia') {
+            // Only kasubag and komisioner can access
+            if (!auth()->check() || !auth()->user()->hasRole(['kasubag', 'komisioner'])) {
+                abort(403, 'You do not have permission to access this post');
             }
-        } else {
-            // Guests can only see publik posts
-            if ($post->type !== 'publik') {
-                abort(403, 'Postingan ini bersifat internal/rahasia. Silakan login untuk mengakses.');
+        } elseif ($post->type === 'internal') {
+            // Only authenticated users can access
+            if (!auth()->check()) {
+                abort(403, 'Please login to access this post');
             }
+        }
+        // type === 'publik' - everyone can access
+        
+        // Check if download is requested
+        if ($request->query('download')) {
+            // Verify user can download based on post type
+            if ($post->type === 'rahasia' && (!auth()->check() || !auth()->user()->hasRole(['kasubag', 'komisioner']))) {
+                abort(403, 'You cannot download this file');
+            }
+        
+            if ($post->type === 'internal' && !auth()->check()) {
+                abort(403, 'Please login to download this file');
+            }
+        
+            if ($post->file_path && Storage::disk('public')->exists($post->file_path)) {
+                $post->increment('downloads_count');
+                return Storage::disk('public')->download($post->file_path, $post->file_name);
+            }
+        
+            abort(404, 'File not found');
         }
         
         // Track view count with cookie (3 hours expiration)
         $cookieName = 'post_viewed_' . $post->id;
         
         if (!Cookie::has($cookieName)) {
-            // Increment view count
             $post->increment('views_count');
-            
-            // Set cookie for 3 hours (180 minutes)
             Cookie::queue($cookieName, true, 180);
         }
         
@@ -277,10 +272,6 @@ class PostController extends Controller
         $posts = collect([]);
         
         if ($query) {
-            // Old search without department filter
-            // $posts = Post::search($query)->paginate(10);
-            
-            // Search using Laravel Scout/TNTSearch with department filter
             if ($department) {
                 $posts = Post::search($query)
                     ->query(fn ($builder) => $builder->where('department', $department))
@@ -298,15 +289,12 @@ class PostController extends Controller
      */
     private function generateUniqueCode(int $length): string
     {
-        // Mix of timestamp (base36) + random characters for uniqueness
         $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $code = '';
         
-        // Add microsecond component for extra uniqueness
         $micro = substr(str_replace('.', '', microtime(true)), -4);
         $code .= strtoupper(base_convert($micro, 10, 36));
         
-        // Fill rest with random
         while (strlen($code) < $length) {
             $code .= $chars[random_int(0, strlen($chars) - 1)];
         }

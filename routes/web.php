@@ -29,7 +29,7 @@ Route::get('/table', function () {
 });
 
 Route::resource('/dashboard/posts', PostController::class);
-Route::get('posts/{post}/download', [PostController::class, 'download'])->name('posts.download')->middleware('signed');;
+Route::get('posts/{post}/download', [PostController::class, 'download'])->name('posts.download');
 
 // Document routes
 Route::resource('/dashboard/documents', DocumentController::class);

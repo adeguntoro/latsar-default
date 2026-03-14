@@ -15,11 +15,11 @@ class EnsureUserHasRole
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check()) {
-            $user = Auth::user();
-            
-            // Check if user has any role
-            if (!$user->roles()->exists()) {
+if (Auth::check()) {
+    $user = Auth::user();
+    
+    // Check if user has any role
+            if ($user && !$user->roles()->exists()) {
                 return redirect()->route('no.role');
             }
         }

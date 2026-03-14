@@ -15,8 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('content');
-            $table->string('file_path')->nullable();
+            $table->string('file_path')->nullable(); //this one can't be null, but for testing purpose we can make it nullable
             $table->string('type');
+            // $table->string('department'); //moved to another migration
+
             $table->string('slug')->nullable();
             //$table->string('short_url')->nullable(); //default
             

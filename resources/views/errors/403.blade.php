@@ -18,7 +18,7 @@
             </p>
         @endif
 
-       {{ auth()->user()->getRoleNames()->first() }}
+       {{-- auth()->user()->getRoleNames()->first() --}}
             <a href="{{ url('/home') }}" class="btn btn-primary mt-3">
                 Go Back Home
             </a>

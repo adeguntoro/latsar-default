@@ -14,7 +14,7 @@
                     <div class="row align-items-center mb-4 pb-3 border-bottom">
                         <div class="col-md-3 text-center">
                             @if($profile && $profile->avatar)
-                                <img src="{{ $profile->avatar }}" alt="Profile Picture" class="rounded-circle img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">
+                                <img src="{{ asset('storage/'.$profile->avatar) }} {{-- $profile->avatar --}}" alt="Profile Picture" class="rounded-circle img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">
                             @else
                                 <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto" style="width: 150px; height: 150px;">
                                     <i class="bi bi-person-fill text-white" style="font-size: 64px;"></i>

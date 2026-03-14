@@ -78,33 +78,14 @@ class RequestFileController extends Controller
             'file' => 'required|file|mimes:pdf|max:5000', // Max 5MB
         ]);
 
-        // Handle file upload
-        $filePath = null;
-        $fileName = null;
-        $fileType = null;
-        $fileSize = null;
+        // Storage::disk('public')->makeDirectory('xyz', 0755, true);
 
-        if ($request->hasFile('file') && $request->file('file')->isValid()) {
-            $file = $request->file('file');
-            $extension = $file->getClientOriginalExtension();
-            $filename = time() . '_' . Str::random(10) . '.' . $extension;
-            $path = $file->storeAs('request_files', $filename, 'public');
-            
-            if ($path) {
-                $filePath = $path;
-                $fileName = $file->getClientOriginalName();
-                $fileType = $file->getMimeType();
-                $fileSize = $file->getSize();
-            } else {
-                // Storage failed
-                return back()->withErrors(['file' => 'Failed to upload file. Please try again.'])->withInput();
-            }
-        } else {
-            // This shouldn't happen due to validation, but as a safety check
-            return back()->withErrors(['file' => 'File upload failed. Please ensure the file is valid.'])->withInput();
-        }
+        $file = $request->file('file');
+        $extension = $file->getClientOriginalExtension();
+        $filename = time() . '_' . Str::random(10) . '.' . $extension;
+        $filePath = $file->storeAs('request_files', $filename, 'public');
 
-        // Create request file record
+        // Save to database
         RequestFile::create([
             'post_id' => $validated['post_id'],
             'nama_peminta' => $validated['nama_peminta'],
@@ -112,15 +93,14 @@ class RequestFileController extends Controller
             'alamat_peminta' => $validated['alamat_peminta'],
             'alasan_permintaan' => $validated['alasan_permintaan'],
             'file_path' => $filePath,
-            'file_name' => $fileName,
-            'file_type' => $fileType,
-            'file_size' => $fileSize,
+            'file_name' => $file->getClientOriginalName(),
+            'file_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
             'user_served' => auth()->id(),
         ]);
-
-        return redirect()->route('request-file.index')
-            ->with('success', 'Permintaan file berhasil dikirim.');
-        // */
+        
+        return redirect()->route('request-file.index')->with('success', 'Permintaan file berhasil dikirim.');
+        
     }
 
     /**
@@ -164,8 +144,17 @@ class RequestFileController extends Controller
         $fileType = $requestFile->file_type;
         $fileSize = $requestFile->file_size;
 
+        $folderPath = 'request_files';
+        $disk = 'public';
+
+
         if ($request->hasFile('file') && $request->file('file')->isValid()) {
             // Delete old file if exists
+            if (!Storage::disk($disk)->exists($folderPath)) {
+                Storage::disk($disk)->makeDirectory($folderPath, 0755, true);
+            }
+            // Storage::disk('public')->makeDirectory('xyz', 0755, true);
+            
             if (!empty($requestFile->file_path)) {
                 Storage::disk('public')->delete($requestFile->file_path);
             }
@@ -193,9 +182,9 @@ class RequestFileController extends Controller
             'alamat_peminta' => $validated['alamat_peminta'],
             'alasan_permintaan' => $validated['alasan_permintaan'],
             'file_path' => $filePath,
-            'file_name' => $fileName,
-            'file_type' => $fileType,
-            'file_size' => $fileSize,
+            // 'file_name' => $fileName,
+            // 'file_type' => $fileType,
+            // 'file_size' => $fileSize,
         ]);
 
         return redirect()->route('request-file.index')
